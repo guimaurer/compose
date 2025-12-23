@@ -8,22 +8,49 @@ async function cloneOrPullRepo({
   branch = "main",
   depth = 1,
 }) {
+  // Detect if branch is actually a tag (starts with "v")
+  const isTag = branch.startsWith("v");
+  
   if (!fs.existsSync(path)) {
-    console.log(`Cloning ${repo} into ${path}`);
-    await execa(
-      "git",
-      [
-        "clone",
-        ["--depth", depth],
-        ["--branch", branch],
-        "--single-branch",
-        repo,
-        path,
-      ].flat()
-    );
+    console.log(`Cloning ${repo} into ${path} (${isTag ? "tag" : "branch"}: ${branch})`);
+    if (isTag) {
+      // For tags, clone the repo first, then checkout the tag
+      // We need to fetch tags, so we clone with a bit more depth or fetch tags after
+      await execa(
+        "git",
+        [
+          "clone",
+          ["--depth", Math.max(depth, 10).toString()], // Need more depth for tags
+          repo,
+          path,
+        ].flat()
+      );
+      // Fetch tags and checkout the specific tag
+      await execa("git", ["fetch", "origin", "--tags"], { cwd: path });
+      await execa("git", ["checkout", branch], { cwd: path });
+    } else {
+      // For branches, use --single-branch
+      await execa(
+        "git",
+        [
+          "clone",
+          ["--depth", depth],
+          ["--branch", branch],
+          "--single-branch",
+          repo,
+          path,
+        ].flat()
+      );
+    }
   } else {
-    console.log(`Pulling ${repo} into ${path}`);
-    await execa("git", ["pull"], { cwd: path });
+    if (isTag) {
+      console.log(`Fetching tags and checking out ${branch} in ${path}`);
+      await execa("git", ["fetch", "origin", "--tags"], { cwd: path });
+      await execa("git", ["checkout", branch], { cwd: path });
+    } else {
+      console.log(`Pulling ${repo} into ${path}`);
+      await execa("git", ["pull", "origin", branch], { cwd: path });
+    }
   }
 }
 
