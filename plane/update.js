@@ -35,3 +35,4 @@ if (fs.existsSync(variablesEnvPath)) {
 
 await utils.removeContainerNames("./code/docker-compose.yml");
 await utils.removePorts("./code/docker-compose.yml");
+await utils.removeCommands("./code/docker-compose.yml", ["web", "space", "admin"]);

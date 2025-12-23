@@ -80,6 +80,25 @@ async function removePorts(path) {
   await fs.promises.writeFile(path, document.toString());
 }
 
+async function removeCommands(path, services = ["web", "space", "admin"]) {
+  console.log(`Removing commands from services: ${services.join(", ")}`);
+
+  const file = await fs.promises.readFile(path, "utf8");
+  const document = yaml.parseDocument(file);
+
+  const servicesNode = document.get("services");
+  if (!servicesNode) return;
+
+  servicesNode.items.forEach((item) => {
+    const serviceName = item.key.value;
+    if (services.includes(serviceName)) {
+      item.value.delete("command");
+    }
+  });
+
+  await fs.promises.writeFile(path, document.toString());
+}
+
 async function copyDir(src, dest) {
   console.log(`Copying ${src} to ${dest}`);
 
@@ -112,6 +131,7 @@ export default {
   cloneOrPullRepo,
   removeContainerNames,
   removePorts,
+  removeCommands,
   copyDir,
   downloadFile,
   renameFile,
